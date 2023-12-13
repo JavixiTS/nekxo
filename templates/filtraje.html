@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        h1, th {
+            color: #333;
+            text-align: center;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #e07e00;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #outputContainer, #tablaResultados {
+            margin-top: 20px;
+        }
+
+        #outputContainer {
+            padding: 10px;
+            border: 1px solid #ddd;
+            max-height: 200px;
+            overflow-y: scroll;
+        }
+
+        #ejecutarBtn, #formularioBusqueda {
+            display: block;
+        }
+
+        #ejecutarBtn.hidden, #formularioBusqueda.hidden {
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="formulariosContainer" style="text-align: center;">
+        {% if es_excel %}
+            <p>¿Desea abrir los datos desde MySQL o ir al menú?</p>
+            <form action="/carga_mysql" method="get" style="display: inline-block; margin-right: 10px;">
+                <button type="submit">MySQL</button>
+            </form>
+        {% else %}
+            <p>¿Desea cargar los datos desde Excel o ir al menú?</p>
+            <form action="/abrir_excel" method="get" style="display: inline-block; margin-right: 10px;">
+                <button type="submit">Excel</button>
+            </form>
+        {% endif %}
+        <form action="/" method="get" style="display: inline-block;">
+            <button type="submit">Menú</button>
+        </form>
+    </div>
+
+    <!-- Mostrar los resultados -->
+    <table id="tablaResultados">
+        <thead>
+            <tr>
+                <th class="{% if resultados and 'ID' in resultados[0] %}visible{% else %}hidden{% endif %}">ID</th>
+                <th>COMPETENCIA</th>
+                <th>PRODUCTO</th>
+                <th>PLATAFORMAS</th>
+                <th>MEJOR_PRECIO</th>
+                <th>PRECIO_ORIGINAL</th>
+                <th>PRECIO_SEMINUEVO</th>
+                <th>REBAJA</th>
+                <th>URL</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if resultados %}
+                {% for row in resultados %}
+                    <tr>
+                        <td class="{% if resultados and 'ID' in resultados[0] %}visible{% else %}hidden{% endif %}">{{ row['ID'] }}</td>
+                        <td>{{ row['COMPETENCIA'] }}</td>
+                        <td>{{ row['PRODUCTO'] }}</td>
+                        <td>{{ row['PLATAFORMAS'] }}</td>
+                        <td>{{ row['MEJOR_PRECIO'] }}</td>
+                        <td>{{ row['PRECIO_ORIGINAL'] }}</td>
+                        <td>{{ row['PRECIO_SEMINUEVO'] }}</td>
+                        <td>{{ row['REBAJA'] }}</td>
+                        <td><a href="{{ row['URL'] }}" target="_blank">Enlace</a></td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="14">No hay resultados para mostrar.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</body>
+</html>

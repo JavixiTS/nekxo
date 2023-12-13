@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        h1, th {
+            color: #333;
+            text-align: center;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #e07e00;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #tablaResultados {
+            margin-top: 20px;
+        }
+
+        #outputContainer {
+            bottom: 0;
+            top: 0; /* Cambiado de 'bottom' a 'top' */
+            left: 0;
+            width: 100%;
+            padding: 10px;
+            background-color: #fff; /* Ajusta según tu preferencia */
+            max-height: 100vh; /* Altura máxima del 80% del viewport height */
+
+        }
+
+        #ejecutarBtn, #formularioBusqueda {
+            display: block;
+        }
+
+        #ejecutarBtn.hidden, #formularioBusqueda.hidden {
+            display: none;
+        }
+        * {
+            box-sizing: border-box;
+        }
+
+    </style>
+</head>
+<body>
+    <form action="/buscar" method="post" id="formularioBusqueda">
+        <label for="source">Seleccione el tipo de búsqueda:</label>
+        <select name="source" id="source" onchange="cambiarFuenteDatos()">
+            <option value="MySQL" {% if session.get('source', 'MySQL') == 'MySQL' %}selected{% endif %}>MySQL</option>
+            <option value="Excel" {% if session.get('source', 'MySQL') == 'Excel' %}selected{% endif %}>Excel</option>
+        </select>
+
+        <label for="category">Seleccione la categoría:</label>
+        <select name="category" id="category">
+                <option value="Producto" {% if session.get('category', 'Competencia') == 'Producto' %}selected{% endif %}>Producto</option>
+                <option value="Plataformas" {% if session.get('category', 'Competencia') == 'Plataformas' %}selected{% endif %}>Plataformas</option>
+        </select>
+        
+        <label for="competencia" class="competencia-label">Seleccione la competencia:</label>
+        <select name="competencia" id="competencia" onchange="actualizarTabla()">
+            <option value="Mixtas" {% if session.get('competencia', 'Mixtas') == 'Mixtas' %}selected{% endif %}>Mixtas</option>
+            <option value="ENEBA" {% if session.get('competencia', 'Mixtas') == 'ENEBA' %}selected{% endif %}>ENEBA</option>
+            <option value="INSTANT-GAMING" {% if session.get('competencia', 'Mixtas') == 'INSTANT-GAMING' %}selected{% endif %}>INSTANT-GAMING</option>
+        </select>
+
+        <label for="term">Ingrese el término de búsqueda:</label>
+        <input type="text" name="term" id="term" value="{{ session.get('term', '') }}" required>
+    
+    </form>
+
+
+    <button type="button" id="ejecutarBtn" onclick="ejecutarMezcla()">Ejecutar mezcla.py</button>
+
+    <h3 id="terminoActual">Término de búsqueda actual: <span>{{ session.get('term', '') }}</span></h3>
+
+    
+    <div id="formulariosContainer" class="{% if mostrar_formularios %}visible{% else %}hidden{% endif %}" style="text-align: center;">
+        <p>¿Desea abrir los datos desde Excel o la Base de datos? De lo contrario ouedes pulsar menu si quieres volver al principio</p>
+        <form action="/abrir_excel" method="get" style="display: inline-block; margin-right: 10px;">
+            <button type="submit">Excel</button>
+        </form>
+        
+        <form action="/carga_mysql" method="get" style="display: inline-block;">
+            <button type="submit">MySQL</button>
+        </form>
+
+        <form action="/" method="get" style="display: inline-block;">
+            <button type="submit">Menu</button>
+        </form>
+    </div>
+    
+    
+    <div id="outputContainer" class="hidden">
+        <h3>Salida del script mezcla.py:</h3>
+        <pre id="output"></pre>
+        
+    </div>
+
+    <!-- Mostrar los resultados de MySQL -->
+    <table id="tablaResultados">
+        <thead>
+            <tr>
+                <th class="{% if resultados and 'ID' in resultados[0] %}visible{% else %}hidden{% endif %}">ID</th>
+                <th>COMPETENCIA</th>
+                <th>PRODUCTO</th>
+                <th>PLATAFORMAS</th>
+                <th>MEJOR_PRECIO</th>
+                <th>PRECIO_ORIGINAL</th>
+                <th>PRECIO_SEMINUEVO</th>
+                <th>REBAJA</th>
+                <th>URL</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if resultados %}
+                {% for row in resultados %}
+                    <tr>
+                        <td class="{% if resultados and 'ID' in resultados[0] %}visible{% else %}hidden{% endif %}">{{ row['ID'] }}</td>
+                        <td>{{ row['COMPETENCIA'] }}</td>
+                        <td>{{ row['PRODUCTO'] }}</td>
+                        <td>{{ row['PLATAFORMAS'] }}</td>
+                        <td>{{ row['MEJOR_PRECIO'] }}</td>
+                        <td>{{ row['PRECIO_ORIGINAL'] }}</td>
+                        <td>{{ row['PRECIO_SEMINUEVO'] }}</td>
+                        <td>{{ row['REBAJA'] }}</td>
+                        <td><a href="{{ row['URL'] }}" target="_blank">Enlace</a></td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="14">No hay resultados para mostrar.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        // Función para agregar la salida al contenedor de salida
+        function agregarSalida(output) {
+            var outputDiv = document.getElementById('output');
+
+            // Agregar la nueva línea como elemento de texto
+            var newLine = document.createTextNode(output + '\n');
+            outputDiv.appendChild(newLine);
+
+            // Desplazar hacia abajo automáticamente para mostrar la última línea
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+
+            // Imprimir la salida en la consola del navegador
+            console.log(output);
+        }
+
+        
+
+        // Escuchar el evento de salida del script mezcla.py
+        socket.on('output', function(data) {
+            agregarSalida(data.data);
+            
+        });
+
+        // Modificar la función ejecutarMezcla() para actualizar la tabla y mostrar la salida
+        function ejecutarMezcla() {
+            // Ocultar el formulario, el botón y el mensaje de búsqueda actual
+            document.getElementById('formularioBusqueda').classList.add('hidden');
+            document.getElementById('ejecutarBtn').classList.add('hidden');
+            document.getElementById('terminoActual').classList.add('hidden');
+            document.getElementById('tablaResultados').classList.add('hidden');
+            // Mostrar la salida del script
+         
+            document.getElementById('outputContainer').classList.remove('hidden');
+
+            // Llamada a la ruta /ejecutar_mezcla
+            fetch('/ejecutar_mezcla', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Manejar la respuesta si es necesario
+                console.log(data);
+
+                // Verificar si se deben mostrar los formularios
+                if (data.mostrar_formularios) {
+                    // Cambiar la altura máxima al 80% de la ventana
+                    document.getElementById('outputContainer').style.maxHeight = '80vh';
+                    // Después de recibir la respuesta, mostrar el contenedor de formularios
+                    document.getElementById('formulariosContainer').classList.remove('hidden');
+                }
+            })
+            .catch(error => {
+                console.error('Error al ejecutar el script:', error);
+            });
+        }
+
+
+        // Función para cambiar la fuente de datos y enviar el formulario
+        function cambiarFuenteDatos() {
+            // Enviar el formulario
+            document.getElementById('formularioBusqueda').submit();
+        }
+
+        // Función para buscar automáticamente después de un breve retraso
+        function buscarAutomaticamente() {
+            // Limpiar el temporizador anterior (si existe)
+            clearTimeout(timeoutId);
+            // Establecer un nuevo temporizador para retrasar la búsqueda
+            timeoutId = setTimeout(function () {
+                // Enviar el formulario después del retraso
+                document.getElementById('formularioBusqueda').submit();
+            }, 2000);  // 2000 milisegundos = 2 segundos
+        }
+
+        // Escuchar el evento de entrada (input) en el campo de términos con debouncing
+        var timeoutId;  // Agregamos esta línea para declarar la variable
+        document.getElementById('term').addEventListener('input', buscarAutomaticamente);
+
+        document.getElementById('competencia').addEventListener('input', buscarAutomaticamente);
+
+        // Escuchar el evento de cambio en el menú desplegable de categorías
+        document.getElementById('category').addEventListener('change', cambiarFuenteDatos);
+
+        // Llamada a la función de inicialización cuando se carga la página
+        window.onload = inicializarFormulario;
+    </script>
+</body>
+</html>
